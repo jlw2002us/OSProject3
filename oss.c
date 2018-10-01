@@ -17,6 +17,9 @@ struct Memory{
 };
 struct Memory *shmPTR;
 bool signal_interrupt = false;
+int shmid;
+sem_t *sem;
+
 //catch alarm 
 void  ALARMhandler(int sig)
 { if(signal_interrupt == false)
@@ -27,17 +30,36 @@ void  ALARMhandler(int sig)
        
 }
 
+//SIGTERM handler
+void  sigtermhandler(int sig)
+{ 
+  write (STDOUT_FILENO,"Process terminated",16);
+           shmdt (shmPTR);
+        shmctl (shmid, IPC_RMID, 0);
+
+        /* cleanup semaphores */
+        sem_unlink ("pSem3");   
+        sem_close(sem);  
+        /* unlink prevents the semaphore existing forever */
+        /* if a crash occurs during the execution         */
+    exit(0);
+      
+
+}
+
 int main (int argc, char **argv){
     int i;                        /*      loop variables          */
     key_t shmkey;                 /*      shared memory key       */
-    int shmid;                    /*      shared memory id        */
-    sem_t *sem;                   /*      synch semaphore         *//*shared */
+                        
+                       /*      synch semaphore         *//*shared */
     pid_t pid;                    /*      fork pid                */
     int childCount = 0;                     /*      shared variable         *//*shared */
     unsigned int n;               /*      fork count              */
     unsigned int value;
-    alarm(10);           /*      semaphore value         */
+    signal(SIGALRM, ALARMhandler);
 
+    alarm(10);
+    signal(SIGTERM, sigtermhandler);
     /* initialize a shared variable in shared memory */
     shmkey = ftok (".", 'x');       /* valid directory name and a number */
     printf ("shmkey for p = %d\n", shmkey);
@@ -97,8 +119,7 @@ int main (int argc, char **argv){
   //    wait(NULL);
        while( n < 30){
        if (shmPTR->childpid !=0){
-//         wait(NULL);
-        //  printf("hi");
+
          sem = sem_open("pSem3",0);
          sem_wait(sem);
          printf("childpid is %ld\n" , shmPTR->childpid);
@@ -116,18 +137,12 @@ int main (int argc, char **argv){
 
 
        }
-       for (i=0; i < childCount; i++){
-           wait(NULL);
-         }
-        /* shared memory detach */
-        shmdt (shmPTR);
-        shmctl (shmid, IPC_RMID, 0);
-
-        /* cleanup semaphores */
-        sem_unlink ("pSem3");   
-        sem_close(sem);  
-        /* unlink prevents the semaphore existing forever */
-        /* if a crash occurs during the execution         */
+        for (i =0; i <childCount; i++){
+         printf("hi");  wait(NULL);
+        }
+                 
+        killpg(getpgid(getpid()), SIGTERM);
+        
         exit (0);
     }
 
