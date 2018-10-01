@@ -1,3 +1,5 @@
+
+#include <stdbool.h>
 #include <stdio.h>          /* printf()                 */
 #include <stdlib.h>         /* exit(), malloc(), free() */
 #include <sys/types.h>      /* key_t, sem_t, pid_t      */
@@ -5,25 +7,25 @@
 #include <errno.h>          /* errno, ECHILD            */
 #include <semaphore.h>      /* sem_open(), sem_destroy(), sem_wait().. */
 #include <fcntl.h>          /* O_CREAT, O_EXEC          */
-#include  <stdio.h>
-#include  <stdlib.h>
-#include  <sys/types.h>
-#include  <sys/ipc.h>
-#include  <sys/shm.h>
-#include <stdint.h>
-#include <sys/wait.h>
+#include <time.h>
 #include <unistd.h>
-#include <fcntl.h>
-//Sources used: https://stackoverflow.com/questions/16400820/how-to-use-posix-semaphores-on-forked-processes-in-c
-//
-struct Memory {
-     //int  status;
-     long long int  seconds;
-     long long int  nanoseconds;
-     long int childpid;
-};
+#include <wait.h>
 
-struct Memory  *ShmPTR;
+struct Memory{
+  long long int seconds;
+  long int childpid;
+};
+struct Memory *shmPTR;
+bool signal_interrupt = false;
+//catch alarm 
+void  ALARMhandler(int sig)
+{ if(signal_interrupt == false)
+  write (STDOUT_FILENO,"Alarm went off\n",16);
+        signal(SIGALRM, SIG_IGN);
+   signal_interrupt = true;
+  signal(SIGALRM, ALARMhandler);
+       
+}
 
 int main (int argc, char **argv){
     int i;                        /*      loop variables          */
@@ -31,23 +33,24 @@ int main (int argc, char **argv){
     int shmid;                    /*      shared memory id        */
     sem_t *sem;                   /*      synch semaphore         *//*shared */
     pid_t pid;                    /*      fork pid                */
-                         /*      shared variable         *//*shared */
+    int childCount = 0;                     /*      shared variable         *//*shared */
     unsigned int n;               /*      fork count              */
-    unsigned int value;           /*      semaphore value         */
+    unsigned int value;
+    alarm(10);           /*      semaphore value         */
 
     /* initialize a shared variable in shared memory */
-    shmkey = ftok ("/dev/null", 5);       /* valid directory name and a number */
+    shmkey = ftok (".", 'x');       /* valid directory name and a number */
     printf ("shmkey for p = %d\n", shmkey);
-    shmid = shmget (shmkey, sizeof (struct Memory), 0644 | IPC_CREAT);
+    shmid = shmget (shmkey, sizeof (struct Memory), 0666 | IPC_CREAT);
     if (shmid < 0){                           /* shared memory error check */
         perror ("shmget\n");
         exit (1);
     }
 
-    ShmPTR  = (struct Memory *) shmat (shmid, NULL, 0);   
-    ShmPTR->seconds = 100;
-    ShmPTR->nanoseconds = 0;
-    //printf ("p=%d is allocated in shared memory.\n\n", *p);
+    shmPTR  = (struct Memory *) shmat (shmid, NULL, 0);   /* attach p to shared memory */
+    shmPTR->seconds = 0;
+    shmPTR->childpid = 0;
+//    printf ("p=%d is allocated in shared memory.\n\n", *p);
 
     /********************************************************/
 
@@ -60,16 +63,14 @@ int main (int argc, char **argv){
     scanf ("%u", &value);
 
     /* initialize semaphores for shared processes */
-    sem = sem_open ("pSem", O_CREAT | O_EXCL, 0644, value); 
-    /* name of semaphore is "pSem", semaphore is reached using this name */
-   sem_close(sem);
-    printf ("semaphores initialized.\n\n");
-     ShmPTR->childpid = 0;
-     printf("%ld", ShmPTR->childpid);
-    
+    sem = sem_open ("pSem3", O_CREAT | O_EXCL, 0644, value); 
+     printf ("semaphores initialized.\n\n");
+    sem_close(sem);
+
     /* fork child processes */
     for (i = 0; i < n; i++){
         pid = fork ();
+        childCount++;
         if (pid < 0) {
         /* check for error      */
             sem_unlink ("pSem");   
@@ -77,56 +78,58 @@ int main (int argc, char **argv){
             /* unlink prevents the semaphore existing forever */
             /* if a crash occurs during the execution         */
             printf ("Fork error.\n");
-         }
-         else if (pid == 0){
-             break;}         /* child processes */
-     }
+        }
+        else if (pid == 0){
+             char *args[]={"./user",NULL}; 
+        execvp(args[0],args);} 
 
-   //int counter = 0;
+                  /* child processes */
+    }
+
+    while(signal_interrupt == false){
     /******************************************************/
     /******************   PARENT PROCESS   ****************/
     /******************************************************/
-if (pid != 0){
-      //  printf("hi");
+    if (pid != 0){
         /* wait for all children to exit */
-      //  while (pid = waitpid (-1, NULL, 0)){
-        //  if (errno == ECHILD)
-          //    break;}
-      while(n  < 1000){
-         
-         if(ShmPTR->childpid != 0){ 
-           sem = sem_open("pSem",0);
-           sem_wait(sem);
-           printf("Parent read childpid %ld ", ShmPTR->childpid);
-           wait(NULL);
-           ShmPTR->childpid = 0; 
+        //for( i = 0; i < n; i++){
+//          wait(NULL);//}
+  //    wait(NULL);
+       while( n < 30){
+       if (shmPTR->childpid !=0){
+//         wait(NULL);
+        //  printf("hi");
+         sem = sem_open("pSem3",0);
+         sem_wait(sem);
+         printf("childpid is %ld\n" , shmPTR->childpid);
+          wait(NULL);
+          childCount--;        
+          shmPTR->childpid = 0;
           sem_post(sem);
-           sem_close(sem);}n++;}
-       
-       
-        //printf ("\nParent: All children have exited.\n");
+          sem_close(sem);n++;}}
+       if (signal_interrupt == true) break;
+    
+       do{ if(signal_interrupt == true) break; 
+       printf("Clock ticking..\n");
+       sleep(1);
+        }while (true);
 
+
+       }
+       for (i=0; i < childCount; i++){
+           wait(NULL);
+         }
         /* shared memory detach */
-       
-       shmdt (ShmPTR);
+        shmdt (shmPTR);
         shmctl (shmid, IPC_RMID, 0);
 
         /* cleanup semaphores */
-        sem_unlink ("pSem");   
- //       sem_close(sem);  
+        sem_unlink ("pSem3");   
+        sem_close(sem);  
         /* unlink prevents the semaphore existing forever */
         /* if a crash occurs during the execution         */
         exit (0);
     }
-   
 
-    /******************************************************/
-    /******************   CHILD PROCESS   *****************/
-    /******************************************************/
-   else{
-      //printf("hi");
-      char *args[]={"./user",NULL}; 
-       execvp(args[0],args);}
-      
-    }
-
+    
+}

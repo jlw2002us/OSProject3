@@ -5,58 +5,46 @@
 #include <errno.h>          /* errno, ECHILD            */
 #include <semaphore.h>      /* sem_open(), sem_destroy(), sem_wait().. */
 #include <fcntl.h>          /* O_CREAT, O_EXEC          */
-#include  <stdio.h>
-#include  <stdlib.h>
-#include  <sys/types.h>
-#include  <sys/ipc.h>
-#include  <sys/shm.h>
-#include <stdint.h>
-#include <sys/wait.h>
+#include <time.h>
 #include <unistd.h>
-#include <fcntl.h>
+#include <wait.h>
 
-struct Memory {
-     //int  status;
-     long long int  seconds;
-               long long int  nanoseconds;
-     long int childpid;
-               };
+struct Memory{
+  long long int seconds;
+  long int childpid;
+};
+struct Memory *shmPTR;
+
+int main(){
+  sem_t* sem;
+  key_t  ShmKEY;
+  int ShmID;
+   printf("%ld\n", (long)getpid()); 
+  ShmKEY = ftok(".",'x');
+  ShmID = shmget(ShmKEY, sizeof(struct Memory), 0666);
+  if (ShmID < 0){
+   printf("*** shmget error (client) ***\n");
+   exit(1);
+  }
+  shmPTR = (struct Memory *) shmat(ShmID, NULL, 0);
+  if(ShmID == -1){
+    printf("*** shmat error(client) ***\n");
+    exit(1);
+   }
+   //int x = 0;
+   while(1){   
+   sem = sem_open("pSem3",0);
+   sem_wait(sem);
+    if(shmPTR->childpid == 0){
+     shmPTR->childpid = (long)getpid();
+          
      
-               
-int main()
-{
-  
-//    pid_t pid;
-    key_t          ShmKEY;
-    int            ShmID;
-    struct Memory  *ShmPTR;
-     ShmKEY = ftok("/dev/null",5);
-    ShmID = shmget(ShmKEY, sizeof(struct Memory), 0644);
-    if (ShmID < 0) {
-          printf("*** shmget error (client) ***\n");
-          exit(1);
-     }
-     ShmPTR = (struct Memory *) shmat(ShmID, NULL, 0);
-    if (ShmPTR ==  NULL) {
-          printf("*** shmat error (client) ***\n");
-          exit(1);
-      }
-   int x = 0;
-   while(x < 10000){//printf("hi");
-   sem_t *sem = sem_open("pSem", 0);
-   sem_wait (sem);           /* P operation */
-       printf ("  Child is in critical section.\n");
-        
-        if(ShmPTR->childpid == 0){
-        printf("child pid %ld", (long)getpid());
-        ShmPTR->childpid = (long)getpid();
-        sem_post(sem);
-        sem_close(sem);
-        break;}
-        sem_post (sem);
-        sem_close(sem);
-        x++;}   
-   shmdt((void *) ShmPTR);
-    return(0);
-
+    sem_post(sem);
+     sem_close(sem);
+     break;}
+     sem_post(sem);
+     sem_close(sem);}
+   exit(0);
 }
+    
+  
