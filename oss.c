@@ -15,6 +15,7 @@ struct Memory{
   long long int nanoseconds;
   long long int seconds;
   long int childpid;
+  
 };
 struct Memory *shmPTR;
 bool signal_interrupt = false;
@@ -34,7 +35,7 @@ void  ALARMhandler(int sig)
 //SIGTERM handler
 void  sigtermhandler(int sig)
 { 
-  write (STDOUT_FILENO,"Process terminated",16);
+  write (STDOUT_FILENO,"Process terminated\n",16);
            shmdt (shmPTR);
         shmctl (shmid, IPC_RMID, 0);
 
@@ -60,7 +61,7 @@ int main (int argc, char **argv){
     signal(SIGALRM, ALARMhandler);
 
     alarm(10);
-    signal(SIGTERM, sigtermhandler);
+//    signal(SIGTERM, sigtermhandler);
     /* initialize a shared variable in shared memory */
     shmkey = ftok (".", 'x');       /* valid directory name and a number */
     printf ("shmkey for p = %d\n", shmkey);
@@ -119,21 +120,32 @@ int main (int argc, char **argv){
         //for( i = 0; i < n; i++){
 //          wait(NULL);//}
   //    wait(NULL);
-       while(shmPTR->nanoseconds < 2000000000){
-         if(signal_interrupt == true) break;
+       while(shmPTR->seconds < 2){
+         if(signal_interrupt == true)break;
+         if(childCount > 100) 
+           { printf("child count exceeded\n");
+             break;}
        if (shmPTR->childpid !=0){
 
          sem = sem_open("pSem3",0);
          sem_wait(sem);
          printf("childpid is %ld\n" , shmPTR->childpid);
-          wait(NULL);
-          childCount--;        
+          wait(NULL);        
           shmPTR->childpid = 0;
           sem_post(sem);
-          sem_close(sem);}
-           
-          shmPTR->nanoseconds = shmPTR->nanoseconds + 5;}
-       
+          sem_close(sem);
+          pid = fork();childCount++;
+          if (pid == 0){
+               char *args[]={"./user",NULL}; 
+               execvp(args[0],args);}} 
+
+         
+          shmPTR->nanoseconds = shmPTR->nanoseconds + 10;
+          if(shmPTR->nanoseconds>= 1000000000)
+            {
+              shmPTR->seconds = shmPTR->seconds + 1;
+              shmPTR->nanoseconds = shmPTR->nanoseconds - 1000000000;}}
+               
        if (signal_interrupt == true){  break;}
        
        do{ if(signal_interrupt == true) break; 
@@ -145,9 +157,7 @@ int main (int argc, char **argv){
        }
         
     }
-   for (i =0; i <childCount; i++){
-         printf("hi");  wait(NULL);
-        }
+    
 
         killpg(getpgid(getpid()), SIGTERM);
 

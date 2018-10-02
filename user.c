@@ -37,7 +37,7 @@ int main(){
   key_t  ShmKEY;
   int ShmID;
    signal(SIGTERM, sigtermhandler);
-   printf("%ld\n", (long)getpid()); 
+//   printf("%ld\n", (long)getpid()); 
   ShmKEY = ftok(".",'x');
   ShmID = shmget(ShmKEY, sizeof(struct Memory), 0666);
   if (ShmID < 0){
@@ -50,7 +50,7 @@ int main(){
     exit(1);
    }
    long long int x = 0;
-   while(x < 1000000){   
+   while(x < 10){   
    sem = sem_open("pSem3",0);
    sem_wait(sem);
     if(shmPTR->childpid == 0){
