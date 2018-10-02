@@ -13,6 +13,7 @@ struct Memory{
   long long int nanoseconds;
   long long int seconds;
   long int childpid;
+  char* ShmMsg;
 };
 struct Memory *shmPTR;
  sem_t* sem;
@@ -66,8 +67,9 @@ int main(){
      sem_wait(sem);
      if(shmPTR->childpid == 0){
        shmPTR->childpid = (long)getpid();
-       printf("%lld\n", Usernanoseconds);
-          
+//       printf("%lld\n", Usernanoseconds);
+    //   shmPTR->ShmMsg = (char*)getpid();
+      // printf("%s\n", shmPTR->ShmMsg);
      
        sem_post(sem);
        sem_close(sem);
@@ -80,4 +82,3 @@ int main(){
    exit(0);
 }
     
-  

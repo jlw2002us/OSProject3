@@ -1,4 +1,3 @@
-
 #include <stdbool.h>
 #include <stdio.h>          /* printf()                 */
 #include <stdlib.h>         /* exit(), malloc(), free() */
@@ -15,12 +14,14 @@ struct Memory{
   long long int nanoseconds;
   long long int seconds;
   long int childpid;
+  char* ShmMsg;
   
 };
 struct Memory *shmPTR;
 bool signal_interrupt = false;
 int shmid;
 sem_t *sem;
+bool ChildExceeded = false;
 
 //catch alarm 
 void  ALARMhandler(int sig)
@@ -75,6 +76,7 @@ int main (int argc, char **argv){
     shmPTR->seconds = 0;
     shmPTR->childpid = 0;
     shmPTR->nanoseconds = 0;
+    shmPTR->ShmMsg = "nil";
 //    printf ("p=%d is allocated in shared memory.\n\n", *p);
 
     /********************************************************/
@@ -120,7 +122,8 @@ int main (int argc, char **argv){
        while(shmPTR->seconds < 2){
          if(signal_interrupt == true)break;
          if(childCount > 100) 
-           { printf("child count exceeded\n");
+           { ChildExceeded = true;
+             printf("child count exceeded\n");
              break;}
          if (shmPTR->childpid !=0){
 
@@ -137,12 +140,12 @@ int main (int argc, char **argv){
                execvp(args[0],args);}} 
 
          
-           shmPTR->nanoseconds = shmPTR->nanoseconds + 200;
+           shmPTR->nanoseconds = shmPTR->nanoseconds + 300;
            if(shmPTR->nanoseconds>= 1000000000)
            {
               shmPTR->seconds = shmPTR->seconds + 1;
               shmPTR->nanoseconds = shmPTR->nanoseconds - 1000000000;}}
-               
+       if(ChildExceeded == false) { printf("Simulated time exceeded..\n");}  
        if (signal_interrupt == true){  break;}
        
        do{ if(signal_interrupt == true) break; 
