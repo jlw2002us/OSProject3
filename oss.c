@@ -52,7 +52,7 @@ void  sigtermhandler(int sig)
 int main (int argc, char **argv){
     int i;                        /*      loop variables          */
     key_t shmkey;                 /*      shared memory key       */
-                        
+    //srand(time(NULL));                         
                        /*      synch semaphore         *//*shared */
     pid_t pid;                    /*      fork pid                */
     int childCount = 0;                     /*      shared variable         *//*shared */
@@ -60,8 +60,8 @@ int main (int argc, char **argv){
     unsigned int value;
     signal(SIGALRM, ALARMhandler);
 
-    alarm(10);
-//    signal(SIGTERM, sigtermhandler);
+    alarm(5);
+    signal(SIGTERM, sigtermhandler);
     /* initialize a shared variable in shared memory */
     shmkey = ftok (".", 'x');       /* valid directory name and a number */
     printf ("shmkey for p = %d\n", shmkey);
@@ -116,33 +116,30 @@ int main (int argc, char **argv){
     /******************   PARENT PROCESS   ****************/
     /******************************************************/
     if (pid != 0){
-        /* wait for all children to exit */
-        //for( i = 0; i < n; i++){
-//          wait(NULL);//}
-  //    wait(NULL);
+        
        while(shmPTR->seconds < 2){
          if(signal_interrupt == true)break;
          if(childCount > 100) 
            { printf("child count exceeded\n");
              break;}
-       if (shmPTR->childpid !=0){
+         if (shmPTR->childpid !=0){
 
-         sem = sem_open("pSem3",0);
-         sem_wait(sem);
-         printf("childpid is %ld\n" , shmPTR->childpid);
-          wait(NULL);        
-          shmPTR->childpid = 0;
-          sem_post(sem);
-          sem_close(sem);
-          pid = fork();childCount++;
-          if (pid == 0){
+           sem = sem_open("pSem3",0);
+           sem_wait(sem);
+           printf("childpid is %ld\n" , shmPTR->childpid);
+           wait(NULL);        
+           shmPTR->childpid = 0;
+           sem_post(sem);
+           sem_close(sem);
+           pid = fork();childCount++;
+           if (pid == 0){
                char *args[]={"./user",NULL}; 
                execvp(args[0],args);}} 
 
          
-          shmPTR->nanoseconds = shmPTR->nanoseconds + 10;
-          if(shmPTR->nanoseconds>= 1000000000)
-            {
+           shmPTR->nanoseconds = shmPTR->nanoseconds + 200;
+           if(shmPTR->nanoseconds>= 1000000000)
+           {
               shmPTR->seconds = shmPTR->seconds + 1;
               shmPTR->nanoseconds = shmPTR->nanoseconds - 1000000000;}}
                
@@ -158,7 +155,7 @@ int main (int argc, char **argv){
         
     }
     
-
+        
         killpg(getpgid(getpid()), SIGTERM);
 
         exit (0);
