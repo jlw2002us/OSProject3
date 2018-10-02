@@ -12,6 +12,7 @@
 #include <wait.h>
 
 struct Memory{
+  long long int nanoseconds;
   long long int seconds;
   long int childpid;
 };
@@ -72,6 +73,7 @@ int main (int argc, char **argv){
     shmPTR  = (struct Memory *) shmat (shmid, NULL, 0);   /* attach p to shared memory */
     shmPTR->seconds = 0;
     shmPTR->childpid = 0;
+    shmPTR->nanoseconds = 0;
 //    printf ("p=%d is allocated in shared memory.\n\n", *p);
 
     /********************************************************/
@@ -117,7 +119,8 @@ int main (int argc, char **argv){
         //for( i = 0; i < n; i++){
 //          wait(NULL);//}
   //    wait(NULL);
-       while( n < 30){
+       while(shmPTR->nanoseconds < 2000000000){
+         if(signal_interrupt == true) break;
        if (shmPTR->childpid !=0){
 
          sem = sem_open("pSem3",0);
@@ -127,9 +130,12 @@ int main (int argc, char **argv){
           childCount--;        
           shmPTR->childpid = 0;
           sem_post(sem);
-          sem_close(sem);n++;}}
-       if (signal_interrupt == true) break;
-    
+          sem_close(sem);}
+           
+          shmPTR->nanoseconds = shmPTR->nanoseconds + 5;}
+       
+       if (signal_interrupt == true){  break;}
+       
        do{ if(signal_interrupt == true) break; 
        printf("Clock ticking..\n");
        sleep(1);
@@ -137,14 +143,15 @@ int main (int argc, char **argv){
 
 
        }
-        for (i =0; i <childCount; i++){
+        
+    }
+   for (i =0; i <childCount; i++){
          printf("hi");  wait(NULL);
         }
-                 
+
         killpg(getpgid(getpid()), SIGTERM);
-        
+
         exit (0);
-    }
 
     
 }

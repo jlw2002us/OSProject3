@@ -10,6 +10,7 @@
 #include <wait.h>
 
 struct Memory{
+  long long int nanoseconds;
   long long int seconds;
   long int childpid;
 };
