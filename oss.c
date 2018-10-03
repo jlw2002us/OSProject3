@@ -1,3 +1,4 @@
+#include <string.h>
 #include <stdbool.h>
 #include <stdio.h>          /* printf()                 */
 #include <stdlib.h>         /* exit(), malloc(), free() */
@@ -14,7 +15,7 @@ struct Memory{
   long long int nanoseconds;
   long long int seconds;
   long int childpid;
-  char* ShmMsg;
+  char ShmMsg[50];
   
 };
 struct Memory *shmPTR;
@@ -61,7 +62,7 @@ int main (int argc, char **argv){
     unsigned int value;
     signal(SIGALRM, ALARMhandler);
 
-    alarm(5);
+    alarm(4);
     signal(SIGTERM, sigtermhandler);
     /* initialize a shared variable in shared memory */
     shmkey = ftok (".", 'x');       /* valid directory name and a number */
@@ -76,7 +77,7 @@ int main (int argc, char **argv){
     shmPTR->seconds = 0;
     shmPTR->childpid = 0;
     shmPTR->nanoseconds = 0;
-    shmPTR->ShmMsg = "nil";
+    strcpy(shmPTR->ShmMsg,"nil");
 //    printf ("p=%d is allocated in shared memory.\n\n", *p);
 
     /********************************************************/
@@ -125,13 +126,13 @@ int main (int argc, char **argv){
            { ChildExceeded = true;
              printf("child count exceeded\n");
              break;}
-         if (shmPTR->childpid !=0){
+         if (strcmp(shmPTR->ShmMsg,"nil") != 0){
 
            sem = sem_open("pSem3",0);
            sem_wait(sem);
-           printf("childpid is %ld\n" , shmPTR->childpid);
+           printf("childpid is %s\n" , shmPTR->ShmMsg);
            wait(NULL);        
-           shmPTR->childpid = 0;
+           strcpy(shmPTR->ShmMsg, "nil");
            sem_post(sem);
            sem_close(sem);
            pid = fork();childCount++;
@@ -140,7 +141,7 @@ int main (int argc, char **argv){
                execvp(args[0],args);}} 
 
          
-           shmPTR->nanoseconds = shmPTR->nanoseconds + 300;
+           shmPTR->nanoseconds = shmPTR->nanoseconds + 500;
            if(shmPTR->nanoseconds>= 1000000000)
            {
               shmPTR->seconds = shmPTR->seconds + 1;

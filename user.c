@@ -1,3 +1,4 @@
+#include<string.h>
 #include <stdio.h>          /* printf()                 */
 #include <stdlib.h>         /* exit(), malloc(), free() */
 #include <sys/types.h>      /* key_t, sem_t, pid_t      */
@@ -13,7 +14,7 @@ struct Memory{
   long long int nanoseconds;
   long long int seconds;
   long int childpid;
-  char* ShmMsg;
+  char ShmMsg[20];
 };
 struct Memory *shmPTR;
  sem_t* sem;
@@ -38,6 +39,7 @@ int main(){
   long long int Usernanoseconds;
   key_t  ShmKEY;
   int ShmID;
+//  char pidArray[20];
   signal(SIGTERM, sigtermhandler);
   ShmKEY = ftok(".",'x');
   ShmID = shmget(ShmKEY, sizeof(struct Memory), 0666);
@@ -50,7 +52,11 @@ int main(){
     printf("*** shmat error(client) ***\n");
     exit(1);
    }
-   
+
+//    int someInt = getpid();
+    //char str[12];
+//    sprintf(shmPTR->ShmMsg, "%d", someInt);
+  //  printf("%s\n", shmPTR->ShmMsg);    
     srand(getpid());
     long long int value = 0;
     value = 1 + (rand()%1000000);
@@ -65,12 +71,12 @@ int main(){
     // for(x =0; x < 1000000; x++){ }            
      sem = sem_open("pSem3",0);
      sem_wait(sem);
-     if(shmPTR->childpid == 0){
+     if(strcmp(shmPTR->ShmMsg,"nil") == 0){
        shmPTR->childpid = (long)getpid();
-//       printf("%lld\n", Usernanoseconds);
-    //   shmPTR->ShmMsg = (char*)getpid();
-      // printf("%s\n", shmPTR->ShmMsg);
-     
+       int someInt = getpid();
+    
+       sprintf(shmPTR->ShmMsg, "%d", someInt);
+       
        sem_post(sem);
        sem_close(sem);
        shmdt((void *) shmPTR);
