@@ -14,7 +14,6 @@
 struct shmMsg{
 
   long long int Usernanoseconds;
-  long long int Userseconds;
   long int childpid;
 
 };
@@ -65,13 +64,9 @@ int main(){
       sem_wait(sem);
       if(shmPTR->shmmsg.childpid == 0){
         shmPTR->shmmsg.childpid = (long)getpid();
-        while(Usernanoseconds >=1000000000)
-        {
-            shmPTR->shmmsg .Userseconds++;
-            Usernanoseconds = Usernanoseconds - 1000000000;
-        }
-        shmPTR->shmmsg.Usernanoseconds = Usernanoseconds;
-        printf("Seconds %lld nanoseconds %lld\n", shmPTR->shmmsg.Userseconds, shmPTR->shmmsg.Usernanoseconds);       
+
+        shmPTR->shmmsg.Usernanoseconds = Usernanoseconds;  
+//        printf("nanoseconds %lld\n", shmPTR->shmmsg.Usernanoseconds);       
         sem_post(sem);
         sem_close(sem);
        shmdt((void *) shmPTR);

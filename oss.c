@@ -13,7 +13,7 @@
 
 
 struct shmMsg{
-  long long int Userseconds;
+//  long long int Userseconds;
   long long int Usernanoseconds;
   long int childpid;
 };
@@ -62,8 +62,8 @@ void  sigtermhandler(int sig)
 int main (int argc, char **argv){
     int i;                        /*      loop variables          */
     key_t shmkey;                 /*      shared memory key       */
-    //srand(time(NULL));                         
-                       /*      synch semaphore         *//*shared */
+                             
+    int Userseconds = 0;
     pid_t pid;                    /*      fork pid                */
     int childCount = 0;                     /*      shared variable         *//*shared */
     unsigned int n;               /*      fork count              */
@@ -84,7 +84,7 @@ int main (int argc, char **argv){
     shmPTR  = (struct Memory *) shmat (shmid, NULL, 0);   /* attach p to shared memory */
     shmPTR->seconds = 0;
     shmPTR->nanoseconds = 0;
-    shmPTR->shmmsg.Userseconds = 0;
+  //  shmPTR->shmmsg.Userseconds = 0;
     shmPTR->shmmsg.Usernanoseconds = 0;
     shmPTR->shmmsg.childpid = 0;
 
@@ -139,10 +139,18 @@ int main (int argc, char **argv){
 
            sem = sem_open("pSem3",0);
            sem_wait(sem);
-           printf("OSS: Child %ld is terminating at my time %lld %lld because it reached %lld %lld in user\n", shmPTR->shmmsg.childpid,shmPTR->seconds, shmPTR->nanoseconds,shmPTR->shmmsg.Userseconds, shmPTR->shmmsg.Usernanoseconds);
+           printf("OSS: Child %ld is terminating at my time %lld.%lld", shmPTR->shmmsg.childpid,shmPTR->seconds, shmPTR->nanoseconds);
+           while(shmPTR->shmmsg.Usernanoseconds >= 1000000000)
+           {
+               Userseconds++;
+               shmPTR->shmmsg.Usernanoseconds = shmPTR->shmmsg.Usernanoseconds - 1000000000;
+           }
+           
+           printf(" because it reached %d.%lld in user\n", Userseconds, shmPTR->shmmsg.Usernanoseconds);
+           Userseconds = 0;
            wait(NULL);        
            shmPTR->shmmsg.childpid = 0;
-           shmPTR->shmmsg.Userseconds = 0;
+         
            shmPTR->shmmsg.Usernanoseconds = 0;
            sem_post(sem);
            sem_close(sem);
