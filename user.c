@@ -56,13 +56,12 @@ int main(){
     Userseconds = 0; 
     Usernanoseconds = shmPTR->nanoseconds + value + Usernanoseconds;
      
-   long long int x = 0;
-    for( x = 0; x < 100000; x++){ }   
-    while(Usernanoseconds < (1000000000*shmPTR->seconds)+shmPTR->nanoseconds){
+    while(1){      
+    //while(Usernanoseconds >= (1000000000*shmPTR->seconds)+shmPTR->nanoseconds){
                 
       sem = sem_open("pSem3",0);
       sem_wait(sem);
-      if(shmPTR->shmmsg.childpid == 0){
+      if((shmPTR->shmmsg.childpid == 0)&&(Usernanoseconds <= (1000000000*shmPTR->seconds)+shmPTR->nanoseconds)){
         shmPTR->shmmsg.childpid = (long)getpid();
 
         shmPTR->shmmsg.Usernanoseconds = Usernanoseconds;  
