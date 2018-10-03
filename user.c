@@ -10,37 +10,32 @@
 #include <unistd.h>
 #include <wait.h>
 
+
+struct shmMsg{
+
+  long long int Usernanoseconds;
+  long long int Userseconds;
+  long int childpid;
+
+};
+
 struct Memory{
   long long int nanoseconds;
   long long int seconds;
-  long int childpid;
-  char ShmMsg[20];
+  struct shmMsg shmmsg;
+  
 };
 struct Memory *shmPTR;
  sem_t* sem;
 
 
 
-void  sigtermhandler(int sig)
-{ 
-  write (STDOUT_FILENO,"process terminated\n",16);
-        signal(SIGTERM, SIG_IGN);
-   
-   //sem_unlink("pSem3");
-   sem_close(sem);
-   shmdt((void *) shmPTR);
-  signal(SIGTERM, sigtermhandler);    
-   exit(0);
-
-}
-
 int main(){
   long long int Userseconds;
   long long int Usernanoseconds;
   key_t  ShmKEY;
   int ShmID;
-//  char pidArray[20];
-  signal(SIGTERM, sigtermhandler);
+
   ShmKEY = ftok(".",'x');
   ShmID = shmget(ShmKEY, sizeof(struct Memory), 0666);
   if (ShmID < 0){
@@ -53,10 +48,7 @@ int main(){
     exit(1);
    }
 
-//    int someInt = getpid();
-    //char str[12];
-//    sprintf(shmPTR->ShmMsg, "%d", someInt);
-  //  printf("%s\n", shmPTR->ShmMsg);    
+    
     srand(getpid());
     long long int value = 0;
     value = 1 + (rand()%1000000);
@@ -67,24 +59,27 @@ int main(){
      
    long long int x = 0;
     for( x = 0; x < 100000; x++){ }   
-   while(Usernanoseconds < (1000000000*shmPTR->seconds)+shmPTR->nanoseconds){
-    // for(x =0; x < 1000000; x++){ }            
-     sem = sem_open("pSem3",0);
-     sem_wait(sem);
-     if(strcmp(shmPTR->ShmMsg,"nil") == 0){
-       shmPTR->childpid = (long)getpid();
-       int someInt = getpid();
-    
-       sprintf(shmPTR->ShmMsg, "%d", someInt);
-       
-       sem_post(sem);
-       sem_close(sem);
+    while(Usernanoseconds < (1000000000*shmPTR->seconds)+shmPTR->nanoseconds){
+                
+      sem = sem_open("pSem3",0);
+      sem_wait(sem);
+      if(shmPTR->shmmsg.childpid == 0){
+        shmPTR->shmmsg.childpid = (long)getpid();
+        while(Usernanoseconds >=1000000000)
+        {
+            shmPTR->shmmsg .Userseconds++;
+            Usernanoseconds = Usernanoseconds - 1000000000;
+        }
+        shmPTR->shmmsg.Usernanoseconds = Usernanoseconds;
+        printf("Seconds %lld nanoseconds %lld\n", shmPTR->shmmsg.Userseconds, shmPTR->shmmsg.Usernanoseconds);       
+        sem_post(sem);
+        sem_close(sem);
        shmdt((void *) shmPTR);
        break;}
       
-     sem_post(sem);
-     sem_close(sem);
-     x++;}
+      sem_post(sem);
+      sem_close(sem);
+      }
    exit(0);
 }
     
