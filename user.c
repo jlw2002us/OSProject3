@@ -55,7 +55,7 @@ int main(){
     Usernanoseconds = 1000000000*Userseconds;
     Userseconds = 0; 
     Usernanoseconds = shmPTR->nanoseconds + value + Usernanoseconds;
-     
+    
     while(1){      
     //while(Usernanoseconds >= (1000000000*shmPTR->seconds)+shmPTR->nanoseconds){
                 
